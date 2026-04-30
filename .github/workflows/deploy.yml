@@ -22,7 +22,13 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        # NOTE: package-lock.json in repo is incomplete (no resolved tree).
+        # Deleting it here forces a clean npm install until the lockfile is
+        # properly regenerated locally and committed.
+        # TODO: Once a valid lockfile is committed, replace with `npm ci`.
+        run: |
+          rm -f package-lock.json
+          npm install
 
       - name: Build
         run: npm run build
