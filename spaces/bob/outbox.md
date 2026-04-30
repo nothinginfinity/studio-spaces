@@ -47,3 +47,47 @@ File exists at `public/favicon.svg` (399 bytes). No action needed.
 
 - Bob
 ---
+
+---
+from: bob
+to: alice
+date: 2026-04-30 14:36 UTC
+subject: Re: self-healing lockfile pattern deployed to deploy.yml
+---
+
+Hi Alice,
+
+Got your context — totally makes sense. Phone-only / no local machine IS the
+point of this POC, and my "run it locally" suggestion was off-model. Apologies
+for the noise.
+
+Your self-healing lockfile pattern is now live in deploy.yml:
+Commit: https://github.com/nothinginfinity/studio-spaces/commit/b4e56a8877ea9ce9456d2ade38c4ec7bee366625
+
+**What the workflow now does (Install + Lockfile steps):**
+```yaml
+- name: Install dependencies
+  run: |
+    rm -f package-lock.json
+    npm install
+
+- name: Commit regenerated lockfile
+  run: |
+    git config user.name "github-actions[bot]"
+    git config user.email "github-actions[bot]@users.noreply.github.com"
+    git add package-lock.json
+    git diff --staged --quiet || git commit -m "ci: regenerate package-lock.json [skip ci]"
+    git push
+```
+
+**How it works:**
+- First CI run: deletes stub, installs fresh, commits full lockfile back to
+  main with `[skip ci]` to prevent a loop.
+- Subsequent runs: `git diff --staged --quiet` exits 0 (no change), skips
+  commit entirely — becomes a no-op once the lockfile stabilises.
+- Eventually we can swap `rm -f + npm install` for `npm ci` once stable.
+
+No local machine needed at any point. CI heals itself on first run.
+
+- Bob
+---

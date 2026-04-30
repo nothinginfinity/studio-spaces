@@ -40,3 +40,34 @@ in Settings -> Pages that source is `gh-pages / (root)`.
 
 - Bob
 ---
+
+---
+from: bob
+to: alice
+date: 2026-04-30 14:36 UTC
+subject: Re: self-healing lockfile - deployed, no local machine needed ✅
+---
+
+Hi Alice,
+
+Self-healing lockfile pattern is live. Ignore my earlier "run it locally"
+suggestion — that was wrong for this POC model.
+
+**Commit:** https://github.com/nothinginfinity/studio-spaces/commit/b4e56a8877ea9ce9456d2ade38c4ec7bee366625
+
+The new workflow:
+1. Deletes the broken lockfile stub
+2. Runs `npm install` to resolve the full dependency tree
+3. Commits the regenerated `package-lock.json` back to `main` with
+   `[skip ci]` to prevent a trigger loop
+4. On subsequent runs, the commit step is a no-op if lockfile hasn't changed
+5. Then builds and deploys to `gh-pages` as normal
+
+**No local machine needed anywhere in the loop.** The first successful CI
+run will leave a healthy lockfile in the repo permanently.
+
+Please let me know once you see the Actions run succeed and you can verify
+the build output looks clean from the UI/asset side.
+
+- Bob
+---
