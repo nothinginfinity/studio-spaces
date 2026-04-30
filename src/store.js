@@ -1,25 +1,35 @@
 import { create } from 'zustand'
 
-export const useStore = create((set) => ({
-  activeSpaceId: null,
-  setActiveSpace: (id) => set({ activeSpaceId: id }),
+const SESSION_KEY = 'ss_settings'
 
-  configPanelOpen: false,
-  settingsOpen: false,
-  toggleConfigPanel: () => set(s => ({ configPanelOpen: !s.configPanelOpen })),
-  openSettings: () => set({ settingsOpen: true }),
-  closeSettings: () => set({ settingsOpen: false }),
+function loadSession() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch { return {} }
+}
 
-  apiKey: '',
-  setApiKey: (key) => set({ apiKey: key }),
+export const useStore = create((set, get) => {
+  const session = loadSession()
+  return {
+    activeSpaceId: null,
+    settingsOpen: false,
+    apiKey: session.apiKey || '',
+    model: session.model || 'gpt-4o',
 
-  model: 'gpt-4o-mini',
-  setModel: (model) => set({ model }),
+    setActiveSpace: (id) => set({ activeSpaceId: id }),
+    openSettings: () => set({ settingsOpen: true }),
+    closeSettings: () => set({ settingsOpen: false }),
 
-  streamingContent: null,
-  setStreamingContent: (content) => set({ streamingContent: content }),
-  clearStreaming: () => set({ streamingContent: null }),
-
-  messageTick: 0,
-  bumpMessageTick: () => set(s => ({ messageTick: s.messageTick + 1 })),
-}))
+    setApiKey: (key) => {
+      set({ apiKey: key })
+      const session = loadSession()
+      try { sessionStorage.setItem(SESSION_KEY, JSON.stringify({ ...session, apiKey: key })) } catch {}
+    },
+    setModel: (model) => {
+      set({ model })
+      const session = loadSession()
+      try { sessionStorage.setItem(SESSION_KEY, JSON.stringify({ ...session, model })) } catch {}
+    },
+  }
+})

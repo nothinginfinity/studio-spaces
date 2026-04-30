@@ -1,7 +1,7 @@
 {
   "name": "studio-spaces",
-  "private": true,
   "version": "0.1.0",
+  "description": "A Spaces-first AI chat application",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,14 +9,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "dexie": "^4.0.8",
+    "dexie": "^3.2.7",
     "dexie-react-hooks": "^1.1.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "zustand": "^5.0.0"
+    "zustand": "^4.5.2"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^4.3.2",
+    "@vitejs/plugin-react": "^4.3.1",
     "vite": "^5.4.8"
   }
 }
