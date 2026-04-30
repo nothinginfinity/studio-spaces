@@ -1,35 +1,31 @@
 import { create } from 'zustand'
 
-const SESSION_KEY = 'ss_settings'
+export const useStore = create((set) => ({
+  // Active space
+  activeSpaceId: null,
+  setActiveSpace: (id) => set({ activeSpaceId: id }),
 
-function loadSession() {
-  try {
-    const raw = sessionStorage.getItem(SESSION_KEY)
-    return raw ? JSON.parse(raw) : {}
-  } catch { return {} }
-}
+  // UI state
+  configPanelOpen: false,
+  settingsOpen: false,
+  toggleConfigPanel: () => set((s) => ({ configPanelOpen: !s.configPanelOpen })),
+  openSettings: () => set({ settingsOpen: true }),
+  closeSettings: () => set({ settingsOpen: false }),
 
-export const useStore = create((set, get) => {
-  const session = loadSession()
-  return {
-    activeSpaceId: null,
-    settingsOpen: false,
-    apiKey: session.apiKey || '',
-    model: session.model || 'gpt-4o',
+  // API key (in-memory only — never persisted)
+  apiKey: '',
+  setApiKey: (key) => set({ apiKey: key }),
 
-    setActiveSpace: (id) => set({ activeSpaceId: id }),
-    openSettings: () => set({ settingsOpen: true }),
-    closeSettings: () => set({ settingsOpen: false }),
+  // Default model (individual spaces override this)
+  model: 'gpt-4o-mini',
+  setModel: (model) => set({ model }),
 
-    setApiKey: (key) => {
-      set({ apiKey: key })
-      const session = loadSession()
-      try { sessionStorage.setItem(SESSION_KEY, JSON.stringify({ ...session, apiKey: key })) } catch {}
-    },
-    setModel: (model) => {
-      set({ model })
-      const session = loadSession()
-      try { sessionStorage.setItem(SESSION_KEY, JSON.stringify({ ...session, model })) } catch {}
-    },
-  }
-})
+  // Streaming assistant message (null = not streaming)
+  streamingContent: null,
+  setStreamingContent: (content) => set({ streamingContent: content }),
+  clearStreaming: () => set({ streamingContent: null }),
+
+  // Bump to force message list refresh
+  messageTick: 0,
+  bumpMessageTick: () => set((s) => ({ messageTick: s.messageTick + 1 })),
+}))

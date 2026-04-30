@@ -1,6 +1,7 @@
 /**
  * Stream a chat completion from OpenAI.
- * Calls onChunk(delta) for each token, returns full text.
+ * Calls onChunk(text) with the growing full text on each token.
+ * Returns the final complete string.
  */
 export async function streamChat({ apiKey, model, messages, onChunk }) {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
