@@ -3,13 +3,13 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db, createSpace, deleteSpace } from '../db'
 import { useStore } from '../store'
 import { ThemeToggle } from './ThemeToggle'
-import { IconSpaces, IconPlus, IconEdit, IconTrash, IconSettings } from '../ui/Icons'
+import { IconSpaces, IconPlus, IconEdit, IconTrash, IconSettings, IconClose } from '../ui/Icons'
 import { RenameModal } from '../spaces/RenameModal'
 
-const ICONS = ['✦','🔬','✍️','💻','📚','🎨','🧠','📊','🗂️','🚀','⚡','🌿']
+const ICONS = ['\u2726','\ud83d\udd2c','\u270d\ufe0f','\ud83d\udcbb','\ud83d\udcda','\ud83c\udfa8','\ud83e\udde0','\ud83d\udcca','\ud83d\uddc2\ufe0f','\ud83d\ude80','\u26a1','\ud83c\udf3f']
 function randomIcon() { return ICONS[Math.floor(Math.random() * ICONS.length)] }
 
-export function Sidebar() {
+export function Sidebar({ open, onClose, onSelectSpace }) {
   const spaces = useLiveQuery(() => db.spaces.orderBy('updatedAt').reverse().toArray(), [])
   const { activeSpaceId, setActiveSpace, openSettings } = useStore()
   const [renaming, setRenaming] = useState(null)
@@ -17,7 +17,8 @@ export function Sidebar() {
 
   async function handleNew() {
     const id = await createSpace({ name: 'New Space', icon: randomIcon() })
-    setActiveSpace(id)
+    if (onSelectSpace) onSelectSpace(id)
+    else setActiveSpace(id)
   }
 
   async function handleDelete(id) {
@@ -26,15 +27,34 @@ export function Sidebar() {
     setConfirmDelete(null)
   }
 
+  function handleSelect(id) {
+    if (onSelectSpace) onSelectSpace(id)
+    else setActiveSpace(id)
+  }
+
   return (
     <>
-      <aside className="sidebar" role="navigation" aria-label="Spaces">
+      <aside
+        className={`sidebar ${open ? 'sidebar--open' : ''}`}
+        role="navigation"
+        aria-label="Spaces"
+      >
         <div className="sidebar-header">
           <div className="sidebar-logo">
             <div className="sidebar-logo-icon" aria-hidden="true"><IconSpaces size={14} /></div>
             <span className="sidebar-logo-text">Studio Spaces</span>
           </div>
-          <ThemeToggle />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
+            <ThemeToggle />
+            {/* Close button — visible only on mobile */}
+            <button
+              className="icon-btn sidebar-close-btn"
+              onClick={onClose}
+              aria-label="Close sidebar"
+            >
+              <IconClose size={16} />
+            </button>
+          </div>
         </div>
 
         <nav className="sidebar-nav">
@@ -43,9 +63,9 @@ export function Sidebar() {
             <div
               key={space.id}
               className={`space-item ${activeSpaceId === space.id ? 'active' : ''}`}
-              onClick={() => setActiveSpace(space.id)}
+              onClick={() => handleSelect(space.id)}
               role="button" tabIndex={0}
-              onKeyDown={e => e.key === 'Enter' && setActiveSpace(space.id)}
+              onKeyDown={e => e.key === 'Enter' && handleSelect(space.id)}
               aria-current={activeSpaceId === space.id ? 'page' : undefined}
             >
               <span className="space-item-icon" aria-hidden="true">{space.icon}</span>
