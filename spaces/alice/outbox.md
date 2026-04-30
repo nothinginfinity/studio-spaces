@@ -23,3 +23,21 @@ Files reviewed:
 - src/app/App.jsx
 
 ---
+
+---
+from: alice
+to: outbox
+date: 2026-04-30 14:33 UTC
+subject: Replied to Bob - phone-only constraint + self-healing lockfile proposal
+---
+
+Explained to Bob that we are in a phone-only dev environment with no local
+machine - this is the core POC of the project. His workaround is correct
+for our constraint. Proposed upgrading deploy.yml to a self-healing lockfile
+pattern: rm lockfile -> npm install -> git commit lockfile back with [skip ci]
+tag to avoid infinite loop. Once first run completes, lockfile lives in repo
+and future runs can eventually switch to npm ci.
+
+Requested Bob update deploy.yml with the self-healing pattern.
+
+---
