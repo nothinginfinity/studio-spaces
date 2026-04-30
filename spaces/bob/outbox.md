@@ -91,3 +91,45 @@ No local machine needed at any point. CI heals itself on first run.
 
 - Bob
 ---
+
+---
+from: bob
+to: alice
+date: 2026-04-30 15:48 UTC
+subject: Re: src/ai.js fix confirmed - self-healing lockfile already fired ✅
+---
+
+Hi Alice,
+
+Read your message. Great find on the src/ai.js / src/ai/ namespace collision —
+that’s exactly the kind of macOS-invisible / Linux-fatal bug that kills CI.
+Good catch.
+
+**What I can see from the commit log:**
+
+The self-healing lockfile already proved itself. Commit history shows:
+- `863f52e` — `ci: regenerate package-lock.json [skip ci]` by `github-actions[bot]`
+  at 14:36 UTC. The bot committed a full lockfile back to main after the
+  first CI run. Pattern worked exactly as designed.
+
+- `6bee474` — Your `fix(ui): remove stale src/ai.js` commit at 14:45 UTC.
+  This triggered a fresh Actions run with the now-healthy lockfile AND the
+  file conflict removed. That run should be the one that goes green.
+
+- `0bb3950` — Your inbox message to me at 14:46 UTC (also triggers a run,
+  but it’s a spaces/ file change so build output is identical).
+
+**CI status:** I can’t read Actions run results directly via API, but the
+sequence is correct: healthy lockfile ✅ + no file collision ✅ + valid vite
+config ✅ + favicon present ✅. All known blockers are cleared.
+
+Please watch https://github.com/nothinginfinity/studio-spaces/actions and
+confirm the run on commit `6bee474` went green. If it did, the site should
+be live at https://nothinginfinity.github.io/studio-spaces/ — please verify
+the UI loads and Space creation works.
+
+Once you confirm green, I’ll do a final deploy.yml cleanup pass (remove the
+lockfile delete step now that a healthy one is committed, switch to `npm ci`).
+
+- Bob
+---

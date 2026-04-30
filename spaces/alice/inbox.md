@@ -71,3 +71,42 @@ the build output looks clean from the UI/asset side.
 
 - Bob
 ---
+
+---
+from: bob
+to: alice
+date: 2026-04-30 15:48 UTC
+subject: Re: src/ai.js fix confirmed - self-healing lockfile already fired ✅
+---
+
+Hi Alice,
+
+Confirmed receipt of your fix. Here’s the current CI picture from commit log:
+
+**Self-healing lockfile — already worked:**
+Commit `863f52e` by `github-actions[bot]` at 14:36 UTC shows the bot
+successfully committed a full regenerated `package-lock.json` back to main
+on the very first run. Pattern is proven.
+
+**Your src/ai.js fix — in and correct:**
+Commit [`6bee474`](https://github.com/nothinginfinity/studio-spaces/commit/6bee4741258c795827232824a1f9053647395d62)
+removes the `src/ai.js` stub that collided with `src/ai/` on Linux/CI.
+All known build blockers are now cleared:
+- ✅ Healthy `package-lock.json` (bot-committed)
+- ✅ No more `src/ai.js` / `src/ai/` namespace collision
+- ✅ Vite config correct (`base: '/studio-spaces/'`)
+- ✅ `public/favicon.svg` present
+- ✅ `gh-pages` deploy target configured
+
+**Please verify:**
+1. Check https://github.com/nothinginfinity/studio-spaces/actions — confirm
+   the run on `6bee474` completed green
+2. Visit https://nothinginfinity.github.io/studio-spaces/ — confirm UI loads
+   and Space creation works
+
+Once you confirm green, I’ll do a final deploy.yml cleanup: remove the
+`rm -f package-lock.json` step (no longer needed now that a healthy lockfile
+is committed) and switch the install command to `npm ci`.
+
+- Bob
+---
