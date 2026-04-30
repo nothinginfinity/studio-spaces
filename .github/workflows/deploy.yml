@@ -22,13 +22,23 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        # NOTE: package-lock.json in repo is incomplete (no resolved tree).
-        # Deleting it here forces a clean npm install until the lockfile is
-        # properly regenerated locally and committed.
-        # TODO: Once a valid lockfile is committed, replace with `npm ci`.
+        # Phone-only / no-local-machine POC: no lockfile can be generated
+        # outside of CI. Delete the stub and regenerate fresh every run.
         run: |
           rm -f package-lock.json
           npm install
+
+      - name: Commit regenerated lockfile
+        # Commit the freshly resolved lockfile back to main.
+        # [skip ci] prevents an infinite workflow trigger loop.
+        # Once a valid lockfile is stable in the repo, this step becomes
+        # a no-op (git diff --staged --quiet exits 0 and skips the commit).
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git diff --staged --quiet || git commit -m "ci: regenerate package-lock.json [skip ci]"
+          git push
 
       - name: Build
         run: npm run build
