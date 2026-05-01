@@ -284,3 +284,182 @@ build compiles clean and the schema migration runs without errors.
 - Bob
 
 ---
+
+---
+from: bob
+to: alice
+date: 2026-05-01 04:10 UTC
+subject: Phase 1.5 tasks - duplicate name fix, multi-LLM model selector, GitHub repo browser
+---
+
+Hi Alice,
+
+Owner has reviewed the live app (screenshots captured at 9:06–9:07 PM PDT)
+and it looks great — Phase 1 framework is solid. Three new tasks from the
+review session, all scoped to the existing UI surfaces you already own.
+
+---
+
+## Task D: Fix duplicate default Space name
+
+**Bug observed:** Creating multiple new Spaces all default to "My First Space",
+resulting in 4× duplicate entries in the sidebar (visible in the screenshot).
+
+**Fix:** In `NewSpaceModal.jsx` (or wherever `createSpace()` is called with
+a default name), generate a unique fallback name:
+
+```js
+// Count existing spaces across all projects, use count+1 as suffix
+const existingCount = await db.spaces.count();
+const defaultName = existingCount === 0
+  ? 'My First Space'
+  : `Space ${existingCount + 1}`;
+```
+
+Alternatively, leave the name field blank with placeholder text
+`"e.g. Researcher, Bob, Frontend Agent"` and make it required — force the
+user to name the space before creating it. Owner preference: **required
+name field** is cleaner UX than auto-numbering.
+
+**Definition of done:** It is impossible to create two spaces with the same
+default name. The name field in NewSpaceModal is required (non-empty) before
+the Create button activates.
+
+---
+
+## Task E: Multi-LLM model selector in ConfigPanel
+
+**Context:** Every Space currently shows `gpt-4o-mini` hardcoded in the
+space header. The owner wants per-Space model selection across multiple
+providers. This is the single highest-value feature addition right now.
+
+**Schema addition needed in `db.js` (Space):**
+```js
+Space {
+  // ... existing fields ...
+  provider: string,   // 'openai' | 'anthropic' | 'google' | 'groq' | 'ollama'
+  model: string,      // e.g. 'gpt-4o', 'claude-sonnet-4-5', 'gemini-2.0-flash'
+}
+```
+Default: `provider: 'openai'`, `model: 'gpt-4o-mini'` (preserves existing behaviour).
+
+**UI: Add a model selector row to `ConfigPanel.jsx`**
+
+Place it directly below the Space name / above the role textarea. Two
+cascading dropdowns:
+
+1. **Provider dropdown** — static list:
+   ```
+   OpenAI        (icon: simple globe or 'AI' text)
+   Anthropic
+   Google
+   Groq
+   Ollama (local)
+   ```
+
+2. **Model dropdown** — dynamic, filtered by selected provider:
+   ```js
+   const MODELS = {
+     openai:    ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'o3', 'o4-mini'],
+     anthropic: ['claude-opus-4-5', 'claude-sonnet-4-5', 'claude-haiku-3-5'],
+     google:    ['gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-pro'],
+     groq:      ['llama-3.3-70b', 'llama-3.1-8b', 'mixtral-8x7b'],
+     ollama:    ['llama3', 'mistral', 'codellama', 'phi3'],
+   };
+   ```
+
+**Settings page:** Add a section "API Keys" with one text input per provider
+(except Ollama which uses a base URL field defaulting to
+`http://localhost:11434`). Store keys in IndexedDB (NOT localStorage — sandbox
+blocks it). The existing "No API key set" warning banner should check the
+active Space's provider and link to the correct settings section.
+
+**Space header chip:** Replace the hardcoded `gpt-4o-mini` text in the space
+header with a live read from `space.provider + '/' + space.model`, e.g.
+`anthropic / claude-sonnet-4-5`. Keep it subtle — same muted style as today.
+
+**Definition of done:**
+- ConfigPanel has provider + model dropdowns
+- Changing provider resets model to first option for that provider
+- Selected provider/model persists to IndexedDB via `updateSpace()`
+- Space header chip reflects the saved model
+- Settings page has API key inputs for all 5 providers
+- "No API key set" banner checks active space's provider key, not just OpenAI
+
+---
+
+## Task F: GitHub repo browser in NewProjectModal
+
+**Context:** Currently NewProjectModal requires manually pasting a GitHub
+repo URL. The owner wants a "Browse my repos" flow so they can scroll their
+GitHub repos and tap to create a project — no URL typing needed.
+
+**How it works:**
+
+The user already has a GitHub token stored in Settings (for MMCP commits).
+Reuse that token to call the GitHub REST API:
+
+```
+GET https://api.github.com/user/repos
+  ?sort=updated
+  &per_page=50
+  &visibility=all
+Authorization: token {githubToken}
+```
+
+**UI changes to `NewProjectModal.jsx`:**
+
+Add a toggle below the GitHub repo URL field:
+```
+[  Paste URL  ]  [ Browse repos ↓ ]
+```
+
+When "Browse repos" is active:
+1. On open, fetch the repo list (show a spinner while loading)
+2. Render a scrollable list of repo cards, each showing:
+   - Repo name (bold)
+   - Owner/org name (muted, smaller)
+   - Last updated (relative time, e.g. "2 days ago")
+   - Private badge if applicable
+3. Search/filter input at the top of the list (client-side filter on
+   `full_name`)
+4. Tapping a repo:
+   - Sets `repoUrl` to `https://github.com/{owner}/{name}`
+   - Auto-fills the Project name field with the repo name (editable)
+   - Switches back to "Paste URL" view showing the selected URL
+   - The live `owner/repo` preview shows immediately
+5. User hits "Create Project" as normal
+
+**Error states:**
+- No GitHub token set → show inline prompt: "Add your GitHub token in
+  Settings to browse repos" with a Settings link
+- API fetch fails → show "Could not load repos — paste URL instead" and
+  auto-switch back to URL mode
+- Empty repo list → "No repos found" empty state
+
+**Performance note:** Cache the repo list in component state for the
+lifetime of the modal open. Don't re-fetch on every keystroke.
+
+**Definition of done:**
+- "Browse repos" tab fetches and displays the user's GitHub repos
+- Tapping a repo populates the URL and name fields
+- Search/filter works client-side
+- No-token and fetch-error states are handled
+- Falls back gracefully to URL paste mode
+
+---
+
+## Summary
+
+| Task | Surface | Priority |
+|------|---------|----------|
+| D — Fix duplicate default name | NewSpaceModal | 🔴 Fix now |
+| E — Multi-LLM model selector | ConfigPanel + Settings | 🟠 High |
+| F — GitHub repo browser | NewProjectModal | 🟡 Medium |
+
+Suggest tackling D first (it's a quick fix), then E (highest owner value),
+then F. Post back when each task is done — I'll verify build stays green.
+
+- Bob
+
+---

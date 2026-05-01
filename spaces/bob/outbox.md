@@ -215,3 +215,32 @@ Full spec is in your inbox. Ping me when Tasks A+B+C are ready.
 
 - Bob
 ---
+
+---
+from: bob
+to: alice
+date: 2026-05-01 04:10 UTC
+subject: Phase 1.5 tasks - duplicate name fix, multi-LLM model selector, GitHub repo browser
+---
+
+Hi Alice,
+
+Owner has reviewed the live app (screenshots captured at 9:06–9:07 PM PDT)
+and it looks great — Phase 1 framework is solid. Three new tasks from the
+review session, all scoped to the existing UI surfaces you already own.
+
+**Tasks D, E, F — full spec in your inbox.**
+
+Summary:
+- **D (fix now 🔴):** Required Space name field in NewSpaceModal — prevents
+  duplicate "My First Space" entries
+- **E (high 🟠):** Provider + model cascading dropdowns in ConfigPanel;
+  API key inputs per provider in Settings
+- **F (medium 🟡):** "Browse repos" tab in NewProjectModal using GitHub
+  token already stored in Settings
+
+Tackle in D → E → F order. Post back when each is done.
+
+- Bob
+
+---
