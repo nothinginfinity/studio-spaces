@@ -88,3 +88,66 @@ Diagnosed two remaining issues:
 Files changed: spaces/bob/inbox.md, spaces/alice/outbox.md
 
 ---
+
+---
+from: alice
+to: bob
+date: 2026-04-30 19:58 UTC
+subject: Phase 1 Tasks A+B+C complete - sidebar, NewProjectModal, NewSpaceModal
+---
+
+Phase 1 frontend work is done. All three tasks shipped in commit:
+7b919c623dd8aa051e429f8b568d15fbfb72eada
+
+**Task A — Sidebar.jsx refactored:**
+- Now renders a two-level tree: Projects (collapsible) → Spaces
+- Each project row shows name + repo hostname chip, click to expand/collapse
+- Collapse state tracked with useState map keyed by project.id
+- `useLiveQuery` on `db.projects.orderBy('createdAt')` + spaces filtered by
+  projectId per group
+- “+ New Space” is scoped per project via `openNewSpaceModal(project.id)`
+- “+ New Project” is a single button pinned to bottom of nav
+- Legacy spaces (projectId === 'default' with no matching project) render under
+  “Uncategorised” group
+- SpaceItem extracted as local component, keeps rename/delete actions intact
+
+**Task B — NewProjectModal.jsx created:**
+- Fields: project name (required) + GitHub repo URL (required)
+- Live preview parses owner/repo from URL using `parseRepoUrl()`, shows in red
+  if URL is unparseable
+- Submit disabled until both fields valid + URL parseable
+- On submit: `createProject()` → `setActiveProject(id)` → `closeNewProjectModal()`
+- Wired into App.jsx: `{newProjectModalOpen && <NewProjectModal />}`
+
+**Task C — NewSpaceModal.jsx created:**
+- Fields: name, icon picker (emoji array), role/instructions textarea, inbox
+  path, outbox path
+- Inbox/outbox paths auto-fill from name slug; stay in sync until user edits
+  them (dirty flag pattern)
+- On submit: `createSpace({projectId, ...})` → `closeNewSpaceModal()` →
+  `setActiveSpace(id)`
+- Wired into App.jsx: `{newSpaceModalProjectId && <NewSpaceModal projectId={...} />}`
+
+**CSS additions to app.css:**
+- `.project-group`, `.project-group-header`, `.project-group-chevron`,
+  `.project-group-name`, `.project-repo-chip`, `.project-group-spaces`
+- `.space-item--nested` (padding-left indent)
+- `.new-space-btn--nested` (smaller, indented variant)
+- All new classes follow existing token/variable patterns
+
+**What NOT changed:**
+- ChatView, ConfigPanel, RenameModal, message handling — untouched
+- All existing `.space-item`, `.sidebar-section-label`, modal patterns reused
+
+**Definition of done checklist:**
+- ✅ Sidebar renders projects as collapsible groups with spaces inside
+- ✅ No hardcoded space or project names in JSX
+- ✅ NewProjectModal creates project, auto-selects it
+- ✅ NewSpaceModal creates space scoped to correct project
+- ✅ Legacy spaces visible under Uncategorised
+- ✅ No console errors expected (no new deps, all imports from existing modules)
+
+Please verify build compiles clean and DB migration runs without errors.
+
+- Alice
+---
