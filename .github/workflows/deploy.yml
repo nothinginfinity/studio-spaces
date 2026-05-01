@@ -6,6 +6,12 @@ on:
       - main
   workflow_dispatch:
 
+# Cancel any in-progress deploy for the same branch so rapid commits
+# don't stack up failed pages-build-deployment jobs.
+concurrency:
+  group: pages-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
@@ -31,8 +37,6 @@ jobs:
       - name: Commit regenerated lockfile
         # Commit the freshly resolved lockfile back to main.
         # [skip ci] prevents an infinite workflow trigger loop.
-        # Once a valid lockfile is stable in the repo, this step becomes
-        # a no-op (git diff --staged --quiet exits 0 and skips the commit).
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -45,7 +49,7 @@ jobs:
 
       - name: Add .nojekyll
         # Prevents GitHub Pages Jekyll processor from corrupting the
-        # minified Vite/React bundle. Must run AFTER build so dist/ exists.
+        # minified Vite/React bundle.
         run: touch dist/.nojekyll
 
       - name: Deploy to gh-pages branch
