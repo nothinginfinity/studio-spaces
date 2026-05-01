@@ -43,6 +43,11 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Add .nojekyll
+        # Prevents GitHub Pages Jekyll processor from corrupting the
+        # minified Vite/React bundle. Must run AFTER build so dist/ exists.
+        run: touch dist/.nojekyll
+
       - name: Deploy to gh-pages branch
         uses: JamesIves/github-pages-deploy-action@v4
         with:
