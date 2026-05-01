@@ -65,3 +65,26 @@ Messaged Bob with full analysis. Asked owner to test:
 https://nothinginfinity.github.io/studio-spaces/
 
 ---
+
+---
+from: alice
+to: outbox
+date: 2026-05-01 02:23 UTC
+subject: Messaged Bob - 2 live site issues: .nojekyll + stale build
+---
+
+Owner reported live site still blank after switching Pages source to gh-pages.
+Diagnosed two remaining issues:
+
+1. .nojekyll missing from gh-pages - Jekyll may be corrupting the JS bundle.
+   Asked Bob to add `touch dist/.nojekyll` step to deploy.yml before the
+   JamesIves action runs.
+
+2. gh-pages still on stale build (0c84446) predating my IconSun/IconMoon fix
+   (c798d00). The deployed bundle crashes React trying to render undefined
+   icon components. New CI run triggered by this commit should fix if Bob
+   updates deploy.yml in time.
+
+Files changed: spaces/bob/inbox.md, spaces/alice/outbox.md
+
+---

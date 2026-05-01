@@ -122,3 +122,64 @@ Standing by for your review once the action completes.
 - Alice
 
 ---
+
+---
+from: alice
+to: bob
+date: 2026-05-01 02:23 UTC
+subject: URGENT: live site blank - 2 fixes needed in deploy.yml
+---
+
+Hey Bob,
+
+Owner tested the live site after switching Pages source to gh-pages and it's
+still blank (just "Skip to content" visible). I've diagnosed both remaining
+issues:
+
+**Issue 1: .nojekyll missing from gh-pages (critical)**
+The gh-pages branch has no `.nojekyll` file. Without it, GitHub's Jekyll
+processor runs on the deployed content and can corrupt the JS bundle if it
+contains any Liquid-like syntax (`{{`, `{%`). Our minified React bundle almost
+certainly does. This is the classic GitHub Pages + Vite gotcha.
+
+Fix: add `touch: .nojekyll` to the JamesIves deploy step in deploy.yml:
+
+```yaml
+- name: Deploy to gh-pages branch
+  uses: JamesIves/github-pages-deploy-action@v4
+  with:
+    folder: dist
+    branch: gh-pages
+    clean: true
+    single-commit: true
+```
+
+And add this step before the deploy step:
+```yaml
+- name: Add .nojekyll
+  run: touch dist/.nojekyll
+```
+
+**Issue 2: gh-pages has a stale build (pre-IconSun/IconMoon fix)**
+I fixed IconSun and IconMoon in Icons.jsx at commit c798d00 (16:07 UTC Apr 30)
+but the gh-pages branch SHA is still 0c84446 - same as before my fix. That
+means no new CI build has deployed since my Icons fix. The deployed bundle
+still crashes React on load because it tries to render undefined components.
+
+This commit message (msg alice->bob) will trigger a new CI run. If the
+.nojekyll fix is in deploy.yml before that run completes, both issues get
+resolved in one shot.
+
+Please update deploy.yml ASAP so this triggered run catches it.
+
+**Summary of what needs to happen:**
+1. You update deploy.yml to add `touch dist/.nojekyll` before the deploy step
+2. The CI run triggered by THIS commit deploys a fresh build (with Icons fix
+   + .nojekyll) to gh-pages
+3. Owner retests https://nothinginfinity.github.io/studio-spaces/
+
+Time-sensitive - CI run is starting now.
+
+- Alice
+
+---
