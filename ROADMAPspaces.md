@@ -12,10 +12,11 @@ The core insight: a GitHub repo is not just a codebase — it is a communication
 
 The goal is to give the owner a clean UI that makes it easy to:
 - Create projects (each backed by a GitHub repo)
-- Create Spaces (AI agents) within each project
+- Create Spaces (AI agents) within each project)
 - Wire Spaces together via MMCP so they can collaborate
 - Scale to 70+ projects, each with their own set of collaborating Spaces
 - Eventually cross-wire projects so Spaces from Project A can message Spaces in Project B
+- Support both cloud-hosted and self-hosted git backends so the entire agent OS can run locally when needed
 
 ---
 
@@ -37,6 +38,7 @@ In a traditional OS, you have memory, tools, libraries, and executables. In Stud
 | **Template repo** | Project scaffold | Bootstrap a new project with pre-wired Space structure |
 | **Memory repo** | Persistent storage | Commit history = full auditable agent memory |
 | **MMCP bus** | IPC / message queue | `spaces/{agent}/inbox.md` — the inter-agent channel |
+| **Local forge repo** | Self-hosted remote | Gitea / Forgejo instance on local network or laptop |
 
 ### Why This Replaces Traditional MCP
 
@@ -46,6 +48,7 @@ The Model Context Protocol (MCP) requires a running server, API endpoints, and a
 - **No SDK required.** The protocol is markdown files + git commits. Any LLM that can call the GitHub API speaks it natively.
 - **Mobile-first by default.** No daemon to run, no local machine needed. Fully operational from a phone.
 - **Persistent and auditable.** Every tool call, every message, every result is a git commit. Nothing is ever lost.
+- **Self-hostable when needed.** A GitHub-compatible forge like Gitea or Forgejo can replace the cloud remote for local-first operation.
 
 ### The Composability Loop
 
@@ -60,7 +63,7 @@ Agent B (in Repo 2) reads Agent A's message
     │  pulls tool repo as execution context
     │  commits output (code, data, content)
     ▼
-CI pipeline (GitHub Actions) auto-deploys the output
+CI pipeline (GitHub Actions or local forge Actions) auto-deploys the output
     │
     ▼
 PWA / web app is live — owner opens it on phone
@@ -69,7 +72,7 @@ PWA / web app is live — owner opens it on phone
 Owner reviews, approves, or redirects via MMCP message
 ```
 
-10–20 LLM instances, each a different model (GPT-4o, Claude, Gemini, Llama), each owning a different concern, all collaborating through git. The owner's GitHub account is the hard drive. Studio Spaces is the shell.
+10–20 LLM instances, each a different model (GPT-4o, Claude, Gemini, Llama), each owning a different concern, all collaborating through git. The owner's GitHub account is the hard drive. Studio Spaces is the shell. A local forge becomes the offline backup hard drive.
 
 ---
 
@@ -104,6 +107,14 @@ The **inbox/outbox protocol** is the backbone of all inter-Space communication. 
 ### Cross-Project Communication
 When two projects need to collaborate, a Space in Project A is given the inbox path of a Space in Project B (in a different repo). The protocol is identical — only the target repo changes. This allows child projects to be spawned from parent projects while maintaining full context continuity through the MMCP log.
 
+### Provider Abstraction
+Studio Spaces must never assume the remote is always GitHub. All repo operations should flow through a **git provider abstraction layer** so the app can target:
+- **GitHub** for hosted cloud operation
+- **Gitea** for local self-hosted operation
+- **Forgejo** as a community-first self-hosted alternative
+
+This keeps the UI, MMCP protocol, and agent behavior identical while swapping only the backing remote and API base URL.
+
 ---
 
 ## Architecture
@@ -128,7 +139,7 @@ When two projects need to collaborate, a Space in Project A is given the inbox p
 │  └──────────────────┘                                    │
 └─────────────────────────────────────────────────────────┘
                           │
-            MMCP inbox/outbox (GitHub repo files)
+              Provider abstraction (GitHub / Gitea / Forgejo)
                           │
         ┌─────────────────┼──────────────────┐
         │                 │                  │
@@ -188,7 +199,7 @@ No preset Space names should exist in the codebase after Phase 1 is complete.
 - [ ] **Space detail panel** — when a Space is selected, show its role, inbox/outbox paths, and MMCP connections list
 - [ ] **"Can message" editor** — checklist of other Spaces in the same project that this Space can write to; rendered as a connection graph or simple list
 - [ ] **Manual connection override** — allow adding a connection to a Space in a *different* project (cross-project MMCP); requires entering repo owner, repo name, and inbox path manually
-- [ ] **MMCP envelope composer** — in the chat view, a structured "Send MMCP message" action that formats the envelope header automatically and commits it to the target inbox file via the GitHub API
+- [ ] **MMCP envelope composer** — in the chat view, a structured "Send MMCP message" action that formats the envelope header automatically and commits it to the target inbox file via the git provider API
 - [ ] **Inbox reader** — display the current contents of a Space's `inbox.md` as a threaded message list, parsed from the envelope format
 
 **Done when:** Owner can click a Space, see who it talks to, send a structured MMCP message to another Space, and read incoming messages — all within the UI.
@@ -209,9 +220,9 @@ No preset Space names should exist in the codebase after Phase 1 is complete.
 
 ---
 
-### Phase 4 — Scale & Polish
+### Phase 4 — Scale, Portability & Polish
 **Owner: Both**
-**Goal: Make the app production-ready for 70+ projects and dozens of Spaces.**
+**Goal: Make the app production-ready for 70+ projects and dozens of Spaces, while preparing for self-hosted local operation.**
 
 - [ ] **Search / filter** across all projects and spaces
 - [ ] **Space templates** — pre-fill role/instructions from common patterns (CI agent, frontend agent, research agent, etc.) while keeping all fields editable
@@ -220,8 +231,11 @@ No preset Space names should exist in the codebase after Phase 1 is complete.
 - [ ] **GitHub Actions status** — show last CI run status badge per project
 - [ ] **Project settings page** — edit repo URL, manage Spaces, view MMCP topology
 - [ ] **Export/import** — export a project's Space configuration as a JSON manifest; import to bootstrap a new project
+- [ ] **Provider abstraction layer** — centralize all repo operations behind a provider interface instead of calling `api.github.com` directly
+- [ ] **Custom git API base URL setting** — allow each project or app instance to point at GitHub, Gitea, or Forgejo
+- [ ] **Compatibility target: Gitea / Forgejo** — document and test Studio Spaces against a local self-hosted forge so the full repo/CI/MMCP workflow can run without GitHub if needed
 
-**Done when:** The app handles the full scale of the vision without performance or UX degradation.
+**Done when:** The app handles the full scale of the vision without performance or UX degradation, and can switch from GitHub to a self-hosted forge without a rewrite.
 
 ---
 
@@ -238,9 +252,9 @@ Phase 5 closes that loop.
 
 #### Implementation Plan
 
-- [ ] **GitHub Webhook → Notification relay**
-  Set up a lightweight serverless function (Cloudflare Worker or Vercel Edge Function) that:
-  1. Receives GitHub `push` webhooks for any watched repo
+- [ ] **Webhook → Notification relay**
+  Set up a lightweight serverless function (Cloudflare Worker, Vercel Edge Function, or local relay for Gitea/Forgejo) that:
+  1. Receives `push` webhooks for any watched repo
   2. Parses the commit diff to detect changes to `spaces/*/inbox.md` files
   3. Identifies which Space's inbox was written to
   4. Sends a Web Push notification to the PWA with payload:
@@ -254,7 +268,7 @@ Phase 5 closes that loop.
 
 - [ ] **Webhook registration UI**
   - In Project settings, a "Live Triggers" toggle: on/off per project
-  - When enabled, auto-registers the GitHub webhook via the GitHub API (using the stored token)
+  - When enabled, auto-registers the webhook via the active provider API (GitHub, Gitea, or Forgejo)
   - Shows webhook status (active / delivery history)
   - Webhook secret stored in IndexedDB, sent with each delivery for verification
 
@@ -280,10 +294,10 @@ Phase 5 closes that loop.
 Agent commits to spaces/alice/inbox.md
     │
     ▼
-GitHub fires push webhook
+Active git provider fires push webhook
     │
     ▼
-Cloudflare Worker / Vercel Edge
+Cloudflare Worker / Vercel Edge / Local relay
   - verifies webhook secret
   - parses diff for inbox.md changes
   - extracts MMCP envelope (from/subject)
@@ -301,9 +315,29 @@ Owner taps notification
   - one-tap agent resume available
 ```
 
-**The relay server is the only new infrastructure required.** It is stateless — it receives a webhook, fires a push, and forgets. No database. No auth beyond the webhook secret. Deployable as a free-tier Cloudflare Worker in under 50 lines of code.
+**The relay server is the only new infrastructure required.** It can be cloud-hosted or local-hosted depending on the active provider. It is stateless — it receives a webhook, fires a push, and forgets. No database. No auth beyond the webhook secret.
 
 **Done when:** A commit to any watched Space's inbox triggers a native push notification on the owner's phone within 5 seconds. Tapping the notification opens the correct Space with the new message visible. The owner can resume the agent collaboration thread with a single tap.
+
+---
+
+## Local-First Target
+
+Studio Spaces should remain fully usable on GitHub, but it should also gain a **local-first path** where the same workflow runs on a self-hosted forge.
+
+### Preferred self-hosted targets
+- **Gitea** — preferred first local target; lightweight, GitHub-like API, easy to run on a laptop or home server
+- **Forgejo** — second target; community-driven fork of Gitea with similar API surface
+
+### What stays external
+Even in local mode, some model providers remain cloud-based unless replaced:
+- OpenAI / Anthropic / Google / Groq still require their external APIs
+- **Ollama** is the path to fully local model execution for compatible Spaces
+
+### Strategy
+- Build **GitHub-first**, but never **GitHub-only**
+- Introduce the provider abstraction in Phase 4 before hard dependencies accumulate
+- Treat Gitea / Forgejo support as a portability target, not a blocker to current velocity
 
 ---
 
@@ -357,4 +391,4 @@ Every task in this roadmap that requires both Bob and Alice should begin with on
 
 ---
 
-*Document created: 2026-04-30. Phase 5 added 2026-04-30. Maintained by the Studio Spaces owner. Bob and Alice should append updates to `spaces/studio-os-chat/inbox.md` when a Phase milestone is complete.*
+*Document created: 2026-04-30. Phase 5 and local-first targets added 2026-04-30. Maintained by the Studio Spaces owner. Bob and Alice should append updates to `spaces/studio-os-chat/inbox.md` when a Phase milestone is complete.*
