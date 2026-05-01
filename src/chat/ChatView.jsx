@@ -10,9 +10,10 @@ import { IconSliders, IconClear, IconKey } from '../ui/Icons'
 export function ChatView() {
   const {
     activeSpaceId,
-    apiKey,
+    apiKeys,
     configPanelOpen,
     toggleConfigPanel,
+    openSettings,
     streamingContent,
     setStreamingContent,
     clearStreaming,
@@ -31,6 +32,12 @@ export function ChatView() {
   const [error, setError] = useState(null)
   const bottomRef = useRef(null)
 
+  const activeProvider = space?.provider || 'openai'
+  const activeApiKey = activeProvider === 'ollama'
+    ? (apiKeys?.ollamaUrl || 'http://localhost:11434')
+    : (apiKeys?.[activeProvider] || '')
+  const keyMissing = activeProvider !== 'ollama' && !activeApiKey
+
   useEffect(() => {
     if (!activeSpaceId) { setMessages([]); return }
     getMessages(activeSpaceId).then(setMessages)
@@ -42,7 +49,7 @@ export function ChatView() {
 
   async function handleSend() {
     if (!input.trim() || sending) return
-    if (!apiKey) { setError('Add your OpenAI API key in Settings first.'); return }
+    if (keyMissing) { setError(`Add your ${activeProvider} API key in Settings first.`); return }
 
     const userText = input.trim()
     setInput('')
@@ -53,8 +60,8 @@ export function ChatView() {
     bumpMessageTick()
 
     const allMsgs = await getMessages(activeSpaceId)
-    const systemPrompt = space?.instructions
-      ? [{ role: 'system', content: space.instructions }]
+    const systemPrompt = space?.role
+      ? [{ role: 'system', content: space.role }]
       : []
 
     const chatMessages = [
@@ -66,7 +73,7 @@ export function ChatView() {
       setStreamingContent('')
       const model = space?.model || 'gpt-4o-mini'
       const full = await streamChat({
-        apiKey,
+        apiKey: activeApiKey,
         model,
         messages: chatMessages,
         onChunk: (text) => setStreamingContent(text),
@@ -91,6 +98,8 @@ export function ChatView() {
 
   if (!space) return null
 
+  const modelChip = `${space.provider || 'openai'} / ${space.model || 'gpt-4o-mini'}`
+
   return (
     <div className="space-view">
       <header className="space-header">
@@ -98,8 +107,8 @@ export function ChatView() {
         <div className="space-header-info">
           <div className="space-header-name">{space.name}</div>
           <div className="space-header-meta">
-            {space.model || 'gpt-4o-mini'}
-            {space.instructions ? ' · Custom instructions active' : ''}
+            {modelChip}
+            {space.role ? ' · Custom instructions active' : ''}
           </div>
         </div>
         <div className="space-header-actions">
@@ -124,10 +133,19 @@ export function ChatView() {
         </div>
       </header>
 
-      {!apiKey && (
+      {keyMissing && (
         <div className="api-key-banner" role="alert">
           <IconKey size={14} />
-          No API key set — open <strong>Settings</strong> to add your OpenAI key before chatting.
+          No {activeProvider} API key set —{' '}
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            style={{ padding: 0, textDecoration: 'underline', fontSize: 'inherit' }}
+            onClick={openSettings}
+          >
+            open Settings
+          </button>{' '}
+          to add your key, or pick a different provider in Configure.
         </div>
       )}
 
@@ -137,7 +155,7 @@ export function ChatView() {
             <div className="chat-empty-icon">{space.icon}</div>
             <h3>{space.name}</h3>
             <p>
-              {space.instructions
+              {space.role
                 ? 'Custom instructions active. Start a conversation.'
                 : 'No instructions set. Configure this Space or just start chatting.'}
             </p>
@@ -188,7 +206,7 @@ export function ChatView() {
         value={input}
         onChange={setInput}
         onSend={handleSend}
-        disabled={sending || !apiKey}
+        disabled={sending || keyMissing}
       />
 
       {configPanelOpen && <ConfigPanel />}

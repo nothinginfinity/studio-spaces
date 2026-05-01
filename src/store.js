@@ -25,13 +25,21 @@ export const useStore = create((set) => ({
   openNewSpaceModal:  (projectId) => set({ newSpaceModalProjectId: projectId }),
   closeNewSpaceModal: () => set({ newSpaceModalProjectId: null }),
 
-  // ─── API key (in-memory only — never persisted) ───────────────────
-  apiKey: '',
-  setApiKey: (key) => set({ apiKey: key }),
+  // ─── API keys (in-memory; loaded from IndexedDB on Settings open) ─
+  // keyed by provider: openai | anthropic | google | groq | ollamaUrl
+  apiKeys: {
+    openai: '',
+    anthropic: '',
+    google: '',
+    groq: '',
+    ollamaUrl: 'http://localhost:11434',
+  },
+  setApiKey: (provider, value) =>
+    set((s) => ({ apiKeys: { ...s.apiKeys, [provider]: value } })),
 
-  // ─── Default model (individual spaces can override) ───────────────
-  model: 'gpt-4o-mini',
-  setModel: (model) => set({ model }),
+  // GitHub token (stored in IndexedDB via db.settings)
+  githubToken: '',
+  setGithubToken: (token) => set({ githubToken: token }),
 
   // ─── Streaming assistant message (null = not streaming) ───────────
   streamingContent: null,

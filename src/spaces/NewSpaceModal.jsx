@@ -17,17 +17,17 @@ export function NewSpaceModal({ projectId }) {
   const slug = toSlug(name)
   const [inboxPath, setInboxPath] = useState('')
   const [outboxPath, setOutboxPath] = useState('')
-
-  // Keep paths in sync with name until user manually edits them
   const [inboxDirty, setInboxDirty] = useState(false)
   const [outboxDirty, setOutboxDirty] = useState(false)
 
   const effectiveInbox  = inboxDirty  ? inboxPath  : (slug ? `spaces/${slug}/inbox.md`  : '')
   const effectiveOutbox = outboxDirty ? outboxPath : (slug ? `spaces/${slug}/outbox.md` : '')
 
+  const canSubmit = name.trim().length > 0
+
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!name.trim()) return
+    if (!canSubmit) return
     const id = await createSpace({
       projectId,
       name: name.trim(),
@@ -52,16 +52,21 @@ export function NewSpaceModal({ projectId }) {
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
             <div className="field">
-              <label htmlFor="space-name">Space name</label>
+              <label htmlFor="space-name">Space name <span style={{ color: 'var(--color-error)' }}>*</span></label>
               <input
                 id="space-name"
                 className="input"
                 value={name}
                 onChange={e => setName(e.target.value)}
                 autoFocus
-                placeholder="Alice"
+                placeholder="e.g. Researcher, Bob, Frontend Agent"
                 required
               />
+              {!canSubmit && name.length === 0 && (
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', marginTop: 'var(--space-1)' }}>
+                  Give this Space a unique name before creating it.
+                </p>
+              )}
             </div>
 
             <div className="field">
@@ -125,7 +130,7 @@ export function NewSpaceModal({ projectId }) {
           </div>
           <div className="modal-footer">
             <button type="button" className="btn btn-secondary" onClick={closeNewSpaceModal}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={!name.trim()}>Create Space</button>
+            <button type="submit" className="btn btn-primary" disabled={!canSubmit}>Create Space</button>
           </div>
         </form>
       </div>

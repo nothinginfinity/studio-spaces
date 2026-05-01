@@ -2,10 +2,27 @@ import { useState, useEffect } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, updateSpace } from '../db'
 import { useStore } from '../store'
-import { IconClose, IconSliders } from '../ui/Icons'
+import { IconClose } from '../ui/Icons'
+
+// ─── Multi-LLM model catalogue ────────────────────────────────────────
+const PROVIDERS = [
+  { value: 'openai',    label: 'OpenAI' },
+  { value: 'anthropic', label: 'Anthropic' },
+  { value: 'google',    label: 'Google' },
+  { value: 'groq',      label: 'Groq' },
+  { value: 'ollama',    label: 'Ollama (local)' },
+]
+
+const MODELS = {
+  openai:    ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'o3', 'o4-mini'],
+  anthropic: ['claude-opus-4-5', 'claude-sonnet-4-5', 'claude-haiku-3-5'],
+  google:    ['gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-pro'],
+  groq:      ['llama-3.3-70b', 'llama-3.1-8b', 'mixtral-8x7b'],
+  ollama:    ['llama3', 'mistral', 'codellama', 'phi3'],
+}
 
 export function ConfigPanel() {
-  const { activeSpaceId, toggleConfigPanel } = useStore()
+  const { activeSpaceId, toggleConfigPanel, openSettings, apiKeys } = useStore()
   const space = useLiveQuery(
     () => (activeSpaceId ? db.spaces.get(activeSpaceId) : null),
     [activeSpaceId]
@@ -18,6 +35,7 @@ export function ConfigPanel() {
   const [role, setRole] = useState('')
   const [inboxPath, setInboxPath] = useState('')
   const [outboxPath, setOutboxPath] = useState('')
+  const [provider, setProvider] = useState('openai')
   const [model, setModel] = useState('gpt-4o-mini')
   const [saved, setSaved] = useState(false)
 
@@ -26,22 +44,30 @@ export function ConfigPanel() {
       setRole(space.role || '')
       setInboxPath(space.inboxPath || '')
       setOutboxPath(space.outboxPath || '')
-      setModel(space.model || 'gpt-4o-mini')
+      const p = space.provider || 'openai'
+      setProvider(p)
+      setModel(space.model || MODELS[p][0])
     }
   }, [space?.id])
 
+  function handleProviderChange(e) {
+    const p = e.target.value
+    setProvider(p)
+    setModel(MODELS[p][0])
+  }
+
   async function handleSave() {
     if (!activeSpaceId) return
-    await updateSpace(activeSpaceId, { role, inboxPath, outboxPath, model })
+    await updateSpace(activeSpaceId, { role, inboxPath, outboxPath, provider, model })
     setSaved(true)
     setTimeout(() => setSaved(false), 1800)
   }
 
   if (!space) return null
 
-  const panelSubtitle = project
-    ? `${project.name} / ${space.name}`
-    : space.name
+  const panelSubtitle = project ? `${project.name} / ${space.name}` : space.name
+  const activeProviderKey = provider === 'ollama' ? apiKeys?.ollamaUrl : apiKeys?.[provider]
+  const keyMissing = !activeProviderKey
 
   return (
     <>
@@ -58,6 +84,59 @@ export function ConfigPanel() {
         </div>
 
         <div className="panel-body">
+
+          {/* ── AI Model ─────────────────────────────────── */}
+          <div className="panel-section">
+            <div className="panel-section-label">AI Model</div>
+
+            {keyMissing && (
+              <div
+                className="api-key-banner"
+                role="alert"
+                style={{ marginBottom: 'var(--space-3)', fontSize: 'var(--text-xs)' }}
+              >
+                No API key set for <strong>{PROVIDERS.find(p => p.value === provider)?.label}</strong>.{' '}
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  style={{ padding: 0, textDecoration: 'underline', fontSize: 'inherit' }}
+                  onClick={openSettings}
+                >
+                  Open Settings
+                </button>
+              </div>
+            )}
+
+            <div className="field" style={{ marginBottom: 'var(--space-3)' }}>
+              <label htmlFor="provider-select">Provider</label>
+              <select
+                id="provider-select"
+                className="select"
+                value={provider}
+                onChange={handleProviderChange}
+              >
+                {PROVIDERS.map(p => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="field">
+              <label htmlFor="model-select">Model</label>
+              <select
+                id="model-select"
+                className="select"
+                value={model}
+                onChange={e => setModel(e.target.value)}
+              >
+                {MODELS[provider].map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="divider" />
 
           {/* ── Connection Role ───────────────────────────── */}
           <div className="panel-section">
@@ -94,12 +173,8 @@ export function ConfigPanel() {
                 >
                   <span style={{ fontSize: 16 }}>{p.icon}</span>
                   <span>
-                    <strong style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600 }}>
-                      {p.label}
-                    </strong>
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-                      {p.description}
-                    </span>
+                    <strong style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 600 }}>{p.label}</strong>
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>{p.description}</span>
                   </span>
                 </button>
               ))}
@@ -136,29 +211,6 @@ export function ConfigPanel() {
             </div>
           </div>
 
-          <div className="divider" />
-
-          {/* ── AI Model ─────────────────────────────────── */}
-          <div className="panel-section">
-            <div className="panel-section-label">AI Model</div>
-            <div className="field">
-              <label htmlFor="model-select">Model</label>
-              <select
-                id="model-select"
-                className="select"
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-              >
-                <optgroup label="OpenAI">
-                  <option value="gpt-4o">GPT-4o</option>
-                  <option value="gpt-4o-mini">GPT-4o Mini (fast)</option>
-                  <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                  <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                </optgroup>
-              </select>
-            </div>
-          </div>
-
         </div>
 
         <div className="panel-footer">
@@ -175,9 +227,6 @@ export function ConfigPanel() {
   )
 }
 
-// ─── Connection Role Presets ──────────────────────────────────────────
-// These describe what a Space *does* in a project network — not what
-// personality a generic LLM should pretend to have.
 const ROLE_PRESETS = [
   {
     icon: '🔧',
