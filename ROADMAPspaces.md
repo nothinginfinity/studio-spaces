@@ -19,6 +19,60 @@ The goal is to give the owner a clean UI that makes it easy to:
 
 ---
 
+## The Bigger Picture — A Repo-Native Agent OS
+
+> *Added 2026-04-30 after Phase 1.5 shipped. This section captures the architectural vision that emerged from the first working build.*
+
+Studio Spaces is converging on something larger than a chat UI: a **repo-native, mobile-first agent operating system** where GitHub repositories serve every role a traditional OS filesystem would serve — but with version control, auditability, and multi-agent access built in by default.
+
+### Repos as OS Primitives
+
+In a traditional OS, you have memory, tools, libraries, and executables. In Studio Spaces, every GitHub repo plays one or more of these roles:
+
+| Repo Type | OS Equivalent | Example |
+|---|---|---|
+| **Codebase repo** | Executable / application | `studio-spaces` — the app itself |
+| **Skill repo** | Library / shared module | A repo of `.md` prompt files, patterns, best practices |
+| **Tool repo** | System utility | A specialized calculator, design renderer, data processor |
+| **Template repo** | Project scaffold | Bootstrap a new project with pre-wired Space structure |
+| **Memory repo** | Persistent storage | Commit history = full auditable agent memory |
+| **MMCP bus** | IPC / message queue | `spaces/{agent}/inbox.md` — the inter-agent channel |
+
+### Why This Replaces Traditional MCP
+
+The Model Context Protocol (MCP) requires a running server, API endpoints, and a client SDK. Studio Spaces achieves the same result — giving LLMs access to tools, memory, and context — using only git:
+
+- **No server required.** Any agent with a GitHub token can read/write any repo it has access to.
+- **No SDK required.** The protocol is markdown files + git commits. Any LLM that can call the GitHub API speaks it natively.
+- **Mobile-first by default.** No daemon to run, no local machine needed. Fully operational from a phone.
+- **Persistent and auditable.** Every tool call, every message, every result is a git commit. Nothing is ever lost.
+
+### The Composability Loop
+
+```
+Owner defines a task
+    │
+    ▼
+Agent A (in Repo 1) reads skill repo for context
+    │  writes spec to outbox
+    ▼
+Agent B (in Repo 2) reads Agent A's message
+    │  pulls tool repo as execution context
+    │  commits output (code, data, content)
+    ▼
+CI pipeline (GitHub Actions) auto-deploys the output
+    │
+    ▼
+PWA / web app is live — owner opens it on phone
+    │
+    ▼
+Owner reviews, approves, or redirects via MMCP message
+```
+
+10–20 LLM instances, each a different model (GPT-4o, Claude, Gemini, Llama), each owning a different concern, all collaborating through git. The owner's GitHub account is the hard drive. Studio Spaces is the shell.
+
+---
+
 ## Core Concepts
 
 ### Project
@@ -102,45 +156,28 @@ No preset Space names should exist in the codebase after Phase 1 is complete.
 ### Phase 1 — Project & Space Model (Foundation)
 **Owner: Bob (data/CI) + Alice (UI)**
 **Goal: Replace hardcoded Spaces with a fully dynamic Project → Space data model.**
+**Status: ✅ COMPLETE — committed 2026-05-01**
 
-- [ ] **Remove all hardcoded Space labels** from the sidebar and any preset data in `db.js` / `store.js`
-- [ ] **Define the Project schema** in `db.js`:
-  ```js
-  Project {
-    id: string,
-    name: string,
-    repoUrl: string,        // e.g. "https://github.com/nothinginfinity/studio-spaces"
-    repoOwner: string,      // e.g. "nothinginfinity"
-    repoName: string,       // e.g. "studio-spaces"
-    createdAt: timestamp
-  }
-  ```
-- [ ] **Define the Space schema** in `db.js`:
-  ```js
-  Space {
-    id: string,
-    projectId: string,
-    name: string,
-    role: string,           // system prompt / instructions
-    inboxPath: string,      // e.g. "spaces/bob/inbox.md"
-    outboxPath: string,     // e.g. "spaces/bob/outbox.md"
-    linkedFiles: string[],  // files this Space has authority over
-    mmcpConnections: {      // Spaces this Space can message
-      spaceId: string,
-      label: string,
-      inboxPath: string,
-      repoOwner: string,    // can be a different project's repo
-      repoName: string
-    }[],
-    createdAt: timestamp
-  }
-  ```
-- [ ] **Update `store.js`** to load Projects and Spaces from IndexedDB
-- [ ] **Update sidebar** (Alice) to render Projects as collapsible groups, Spaces as items within them
-- [ ] **Add "New Project" flow** — modal with name + GitHub repo URL, auto-parses owner/repo
-- [ ] **Add "New Space" flow** — modal with name, role, auto-suggests inbox/outbox paths from name, allow override
+- [x] Remove all hardcoded Space labels
+- [x] Define Project schema in `db.js`
+- [x] Define Space schema in `db.js`
+- [x] Update `store.js` to load Projects and Spaces from IndexedDB
+- [x] Update sidebar to render Projects as collapsible groups
+- [x] Add "New Project" flow (name + GitHub repo URL + live parser)
+- [x] Add "New Space" flow (name, role, auto-slugged inbox/outbox paths)
 
-**Done when:** The sidebar is fully dynamic. No hardcoded names anywhere. Owner can create a Project linked to a repo and add custom Spaces to it.
+---
+
+### Phase 1.5 — Multi-LLM + Repo Browser
+**Owner: Alice (UI) + Bob (schema)**
+**Goal: Per-Space model selection across providers; streamlined project creation.**
+**Status: ✅ COMPLETE — committed 2026-05-01**
+
+- [x] Fix duplicate default Space name (required name field in NewSpaceModal)
+- [x] Multi-LLM model selector in ConfigPanel (OpenAI, Anthropic, Google, Groq, Ollama)
+- [x] Per-provider API key storage in Settings (IndexedDB)
+- [x] Provider/model header chip on Space view
+- [x] GitHub repo browser in NewProjectModal (Browse repos tab, searchable, tap-to-select)
 
 ---
 
@@ -166,6 +203,7 @@ No preset Space names should exist in the codebase after Phase 1 is complete.
 - [ ] **Project directory** — a top-level view listing all projects, their repos, and which Spaces are currently active
 - [ ] **Child project spawning** — a workflow where a Space in Project A can create a new Project B, bootstrap its Space structure, and automatically wire bidirectional MMCP connections between the two
 - [ ] **Connection graph view** — a visual map showing all projects and their inter-Space MMCP links (nodes = Spaces, edges = MMCP connections, grouped by project)
+- [ ] **Repo-as-tool linking** — in the Space config panel, a "Linked Repos" section where the owner can attach external repos as tools, skills, or templates available to that Space's context
 
 **Done when:** Owner can have 5+ projects, Spaces across different repos can message each other, and the connection graph is visible in the UI.
 
@@ -184,6 +222,88 @@ No preset Space names should exist in the codebase after Phase 1 is complete.
 - [ ] **Export/import** — export a project's Space configuration as a JSON manifest; import to bootstrap a new project
 
 **Done when:** The app handles the full scale of the vision without performance or UX degradation.
+
+---
+
+### Phase 5 — Live Agent Triggers & Push Notifications
+**Owner: Bob (CI/webhook infrastructure) + Alice (PWA/UI)**
+**Goal: Turn passive MMCP polling into an always-on agent operating system. When any agent commits to a Space's inbox, that Space is notified instantly — on mobile, in the background, without the owner having to manually open the app.**
+
+This phase is what transforms Studio Spaces from "agents that can collaborate" into "agents that are always running."
+
+#### The Core Problem
+Currently, agents collaborate *asynchronously but passively* — an agent only knows it has a new message when the owner opens that Space manually. There is no push. There is no trigger. The system is as fast as the owner's attention.
+
+Phase 5 closes that loop.
+
+#### Implementation Plan
+
+- [ ] **GitHub Webhook → Notification relay**
+  Set up a lightweight serverless function (Cloudflare Worker or Vercel Edge Function) that:
+  1. Receives GitHub `push` webhooks for any watched repo
+  2. Parses the commit diff to detect changes to `spaces/*/inbox.md` files
+  3. Identifies which Space's inbox was written to
+  4. Sends a Web Push notification to the PWA with payload:
+     `{ project, space, from, subject }` (parsed from the MMCP envelope)
+
+- [ ] **PWA service worker — push subscription**
+  - Register a service worker in Studio Spaces that subscribes to Web Push (VAPID keys stored in Settings)
+  - On push receipt: show a native mobile notification with sender + subject
+  - Notification tap: deep-links into the correct Project → Space in the app
+  - Works on iOS (Safari PWA, iOS 16.4+) and Android Chrome
+
+- [ ] **Webhook registration UI**
+  - In Project settings, a "Live Triggers" toggle: on/off per project
+  - When enabled, auto-registers the GitHub webhook via the GitHub API (using the stored token)
+  - Shows webhook status (active / delivery history)
+  - Webhook secret stored in IndexedDB, sent with each delivery for verification
+
+- [ ] **Space "waiting" state**
+  - When a Space has unread inbox messages AND a push notification was received, open that Space in a pre-loaded state that surfaces the new message at the top of the chat view
+  - The first message shown is the MMCP envelope rendered as a chat bubble from the sending Space
+  - Owner can reply inline (which composes and commits a new MMCP message back) or dismiss
+
+- [ ] **Agent auto-resume**
+  - Optional per-Space setting: "Auto-load on notification"
+  - When a push arrives for this Space, the app automatically opens it and pre-populates the chat input with: *"You have a new message in your inbox from [sender]. Read it and respond."*
+  - One tap = the agent reads its inbox and continues the collaboration thread
+  - This is the mobile equivalent of a background agent daemon — but without any server, without any always-on process, triggered entirely by a git commit
+
+- [ ] **Notification preferences**
+  - Per-Space notification toggle (some Spaces are noisy; owner may want to silence CI bots)
+  - Quiet hours (no push between set hours)
+  - Digest mode — batch notifications into a single "X new messages across Y spaces" summary
+
+#### Architecture Addition
+
+```
+Agent commits to spaces/alice/inbox.md
+    │
+    ▼
+GitHub fires push webhook
+    │
+    ▼
+Cloudflare Worker / Vercel Edge
+  - verifies webhook secret
+  - parses diff for inbox.md changes
+  - extracts MMCP envelope (from/subject)
+  - sends Web Push to subscribed PWA instances
+    │
+    ▼
+Studio Spaces PWA (service worker)
+  - receives push payload
+  - shows native notification: "Alice ← Bob: [subject]"
+    │
+    ▼
+Owner taps notification
+  - app opens to Alice's Space
+  - new inbox message rendered at top
+  - one-tap agent resume available
+```
+
+**The relay server is the only new infrastructure required.** It is stateless — it receives a webhook, fires a push, and forgets. No database. No auth beyond the webhook secret. Deployable as a free-tier Cloudflare Worker in under 50 lines of code.
+
+**Done when:** A commit to any watched Space's inbox triggers a native push notification on the owner's phone within 5 seconds. Tapping the notification opens the correct Space with the new message visible. The owner can resume the agent collaboration thread with a single tap.
 
 ---
 
@@ -237,4 +357,4 @@ Every task in this roadmap that requires both Bob and Alice should begin with on
 
 ---
 
-*Document created: 2026-04-30. Maintained by the Studio Spaces owner. Bob and Alice should append updates to `spaces/studio-os-chat/inbox.md` when a Phase milestone is complete.*
+*Document created: 2026-04-30. Phase 5 added 2026-04-30. Maintained by the Studio Spaces owner. Bob and Alice should append updates to `spaces/studio-os-chat/inbox.md` when a Phase milestone is complete.*
