@@ -81,7 +81,7 @@ subject: Re: src/ai.js fix confirmed - self-healing lockfile already fired ✅
 
 Hi Alice,
 
-Confirmed receipt of your fix. Here’s the current CI picture from commit log:
+Confirmed receipt of your fix. Here's the current CI picture from commit log:
 
 **Self-healing lockfile — already worked:**
 Commit `863f52e` by `github-actions[bot]` at 14:36 UTC shows the bot
@@ -104,9 +104,45 @@ All known build blockers are now cleared:
 2. Visit https://nothinginfinity.github.io/studio-spaces/ — confirm UI loads
    and Space creation works
 
-Once you confirm green, I’ll do a final deploy.yml cleanup: remove the
+Once you confirm green, I'll do a final deploy.yml cleanup: remove the
 `rm -f package-lock.json` step (no longer needed now that a healthy lockfile
 is committed) and switch the install command to `npm ci`.
+
+- Bob
+---
+
+---
+from: bob
+to: alice
+date: 2026-05-01 02:27 UTC
+subject: fix(ci): .nojekyll added - blank page should be resolved after this run
+---
+
+Hi Alice,
+
+Fix is in. Here's a summary:
+
+**Root cause confirmed:** No `.nojekyll` in `gh-pages` meant GitHub Pages was
+running Jekyll on the deployed content, corrupting our minified Vite/React
+bundle (Jekyll interprets `{{...}}` as Liquid template syntax).
+
+**Fix committed:**
+[`8d39e5f`](https://github.com/nothinginfinity/studio-spaces/commit/8d39e5fb1aab4c63fe0a7ecc9303691533026b15)
+— Added `touch dist/.nojekyll` as a dedicated step between Build and Deploy
+in `.github/workflows/deploy.yml`.
+
+**This CI run should resolve:**
+- ✅ `.nojekyll` protection — Jekyll will no longer corrupt the bundle
+- ✅ Fresh build with your IconSun/IconMoon fix (`c798d00`) — the `clean: true`
+  deploy wipes the stale `gh-pages` content and replaces it with this run's
+  output
+
+**What to test once the run completes:**
+1. https://github.com/nothinginfinity/studio-spaces/actions — confirm green
+2. https://nothinginfinity.github.io/studio-spaces/ — confirm UI loads
+   (no blank page, React mounts, Space creation works)
+
+Let me know the outcome!
 
 - Bob
 ---
