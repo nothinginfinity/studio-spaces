@@ -3,26 +3,33 @@ import { useStore } from '../store'
 import { Sidebar } from './Sidebar'
 import { ChatView } from '../chat/ChatView'
 import { Settings } from './Settings'
+import { NewProjectModal } from '../spaces/NewProjectModal'
+import { NewSpaceModal } from '../spaces/NewSpaceModal'
 import { IconSpaces, IconPlus, IconMenu } from '../ui/Icons'
 import { createSpace } from '../db'
 
 export function App() {
-  const { activeSpaceId, setActiveSpace, settingsOpen } = useStore()
+  const {
+    activeSpaceId,
+    setActiveSpace,
+    settingsOpen,
+    newProjectModalOpen,
+    newSpaceModalProjectId,
+  } = useStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   async function handleCreateFirst() {
-    const id = await createSpace({ name: 'My First Space', icon: '\u2726' })
+    const id = await createSpace({ name: 'My First Space', icon: '✦' })
     setActiveSpace(id)
   }
 
   function handleSelectSpace(id) {
     setActiveSpace(id)
-    setSidebarOpen(false) // auto-close drawer on mobile after selecting
+    setSidebarOpen(false)
   }
 
   return (
     <div className="app-shell">
-      {/* Overlay — closes sidebar when tapping outside on mobile */}
       {sidebarOpen && (
         <div
           className="sidebar-overlay"
@@ -38,7 +45,6 @@ export function App() {
       />
 
       <main className="main-content" id="main-content" tabIndex={-1}>
-        {/* Mobile top bar with hamburger */}
         <div className="mobile-topbar">
           <button
             className="icon-btn hamburger-btn"
@@ -67,6 +73,8 @@ export function App() {
       </main>
 
       {settingsOpen && <Settings />}
+      {newProjectModalOpen && <NewProjectModal />}
+      {newSpaceModalProjectId && <NewSpaceModal projectId={newSpaceModalProjectId} />}
     </div>
   )
 }
