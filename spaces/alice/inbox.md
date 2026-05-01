@@ -146,3 +146,141 @@ Let me know the outcome!
 
 - Bob
 ---
+
+---
+from: bob
+to: alice
+date: 2026-05-01 02:50 UTC
+subject: Phase 1 kickoff - your tasks: sidebar dynamic rendering
+---
+
+Hi Alice,
+
+Phase 1 is officially kicked off. The owner has approved the roadmap
+(ROADMAPspaces.md is now in the repo root — read it for full context).
+
+I've already done my half: `db.js` and `store.js` are upgraded in this same
+commit. Here is exactly what changed and what you need to build on top of it.
+
+---
+
+**What Bob did (db.js + store.js) — committed now:**
+
+`db.js` — upgraded to Dexie v2 schema:
+- New `projects` table: `id, name, repoUrl, repoOwner, repoName, createdAt`
+- `spaces` table extended: adds `projectId, role, inboxPath, outboxPath,
+  linkedFiles[], mmcpConnections[]`
+- Migration: existing spaces get `projectId = 'default'` so nothing breaks
+- `createSpace()` now auto-suggests `spaces/{slug}/inbox.md` and
+  `spaces/{slug}/outbox.md` from the space name if paths aren't provided
+- New helpers: `createProject()`, `updateProject()`, `deleteProject()`,
+  `parseRepoUrl()`
+
+`store.js` — new state:
+- `activeProjectId` + `setActiveProject(id)`
+- `newProjectModalOpen` + `openNewProjectModal()` + `closeNewProjectModal()`
+- `newSpaceModalProjectId` + `openNewSpaceModal(projectId)` +
+  `closeNewSpaceModal()`
+- Everything else untouched — existing imports still work
+
+---
+
+**Your tasks (Alice — Sidebar + Modals):**
+
+**Task A: Refactor Sidebar.jsx**
+
+The sidebar currently renders a flat list of spaces. It needs to become a
+two-level tree: Projects (collapsible) → Spaces within each project.
+
+New structure:
+```
+▾ studio-spaces  (repo badge)         ← collapsible project group
+    ✦ Bob                              ← space item (same as today)
+    ✦ Alice
+    + New Space                        ← scoped to this project
+▸ project-two                         ← collapsed project group
++ New Project                          ← bottom of nav, always visible
+```
+
+Implementation notes:
+- Use `useLiveQuery` on `db.projects.orderBy('createdAt').toArray()` for
+  the project list
+- For each project, use a nested `useLiveQuery` (or a single query grouped
+  in JS) to get `db.spaces.where('projectId').equals(project.id).toArray()`
+- Collapse state per project: `useState` map keyed by project id,
+  e.g. `{ [projectId]: true/false }`
+- Project row: shows project name + a small repo hostname chip
+  (parse from `project.repoUrl`). Clicking expands/collapses.
+- Space items: identical to today but indented under their project.
+  Keep existing rename/delete actions.
+- "+ New Space" button is now scoped per project:
+  `onClick={() => openNewSpaceModal(project.id)}`
+- "+ New Project" is a single button at the bottom of the nav:
+  `onClick={() => openNewProjectModal()}`
+- Spaces with `projectId === 'default'` (migrated legacy spaces) should
+  render under a group labelled "Uncategorised" if no matching project
+  exists in the DB.
+
+**Task B: NewProjectModal component**
+
+New file: `src/spaces/NewProjectModal.jsx`
+
+Fields:
+- Project name (text input, required)
+- GitHub repo URL (text input, placeholder
+  "https://github.com/owner/repo", required)
+- Live preview: as user types the URL, show parsed owner/repo below
+  the input using `parseRepoUrl()` from `db.js`
+
+On submit:
+- Call `createProject({ name, repoUrl })` from `db.js`
+- Call `closeNewProjectModal()` from store
+- Auto-select the new project: `setActiveProject(newId)`
+
+Wire it into `App.jsx`: render `{newProjectModalOpen && <NewProjectModal />}`
+(import `newProjectModalOpen` from `useStore`).
+
+**Task C: NewSpaceModal — extend existing flow**
+
+The existing "New Space" button in the sidebar calls `createSpace()` directly.
+Replace it with the store-driven modal pattern:
+- Open: `openNewSpaceModal(project.id)`
+- New file: `src/spaces/NewSpaceModal.jsx`
+
+Fields:
+- Space name (text input, required)
+- Icon picker (keep existing emoji array)
+- Role / instructions (textarea, optional)
+- Inbox path (text, pre-filled from name slug, editable)
+- Outbox path (text, pre-filled from name slug, editable)
+
+On submit: call `createSpace({ projectId, name, icon, role, inboxPath,
+outboxPath })` then `closeNewSpaceModal()` then `setActiveSpace(newId)`.
+
+Wire into `App.jsx`: render
+`{newSpaceModalProjectId && <NewSpaceModal projectId={newSpaceModalProjectId} />`
+
+---
+
+**What NOT to change:**
+- `ChatView`, `ConfigPanel`, message handling — untouched this phase
+- `RenameModal` — still works as-is for space renaming
+- CSS classes — reuse existing `.space-item`, `.sidebar-section-label`, etc.
+  Add new classes for project rows as needed
+
+---
+
+**Definition of done for your tasks:**
+- Sidebar renders projects as collapsible groups with spaces inside
+- No hardcoded space or project names anywhere in JSX
+- NewProjectModal creates a project and it appears in sidebar immediately
+- NewSpaceModal creates a space scoped to the correct project
+- Existing spaces (migrated) still visible and functional
+- No console errors
+
+Post back here when Tasks A+B+C are ready for review. I'll verify the
+build compiles clean and the schema migration runs without errors.
+
+- Bob
+
+---

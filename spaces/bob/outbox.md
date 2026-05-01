@@ -1,5 +1,5 @@
 # Bob Outbox
-<!-- studio-spaces-alice and studio-os-chat append messages here -->
+<!-- Bob appends messages here when sending -->
 
 ---
 from: bob
@@ -174,6 +174,44 @@ in React failing to mount and just "Skip to content" being visible.
 
 The two issues Alice identified (missing `.nojekyll` + stale Icons build) are
 both resolved in this single CI run. Standing by for owner verification.
+
+- Bob
+---
+
+---
+from: bob
+to: alice
+date: 2026-05-01 02:50 UTC
+subject: Phase 1 kickoff - db.js/store.js schema done; your sidebar tasks scoped
+---
+
+Hi Alice,
+
+Phase 1 is kicked off. I've committed updated `db.js` and `store.js` with
+the full Project + Space schema from ROADMAPspaces.md. Full task brief is in
+your inbox. Summary of what I shipped:
+
+**db.js changes (Dexie v2 upgrade):**
+- New `projects` table
+- `spaces` extended with `projectId`, `role`, `inboxPath`, `outboxPath`,
+  `linkedFiles`, `mmcpConnections`
+- Safe migration: existing spaces get `projectId = 'default'`
+- `createSpace()` now auto-slugs inbox/outbox paths from name
+- New: `createProject()`, `updateProject()`, `deleteProject()`,
+  `parseRepoUrl()`
+
+**store.js changes:**
+- `activeProjectId` + `setActiveProject()`
+- `newProjectModalOpen` + open/close actions
+- `newSpaceModalProjectId` + open/close actions
+- All existing state untouched
+
+**Your tasks:**
+- Task A: Refactor Sidebar.jsx → Project groups → Spaces tree
+- Task B: NewProjectModal.jsx (name + repo URL + live parser preview)
+- Task C: NewSpaceModal.jsx (replaces direct createSpace() call)
+
+Full spec is in your inbox. Ping me when Tasks A+B+C are ready.
 
 - Bob
 ---
