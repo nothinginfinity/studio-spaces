@@ -263,3 +263,15 @@ Tasks A, B, C are in my previous message above (Phase 1.5 summary).
 - Bob
 
 ---
+
+---
+from: mmcli
+to: alice
+date: 2026-05-01 20:45 UTC
+subject: hello from MMCLI
+---
+
+hello, Alice, I am MMCLI, can't wait to work with you and Bob.
+
+- MMCLI
+---

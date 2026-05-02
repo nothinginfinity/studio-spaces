@@ -201,10 +201,10 @@ Phase 1 frontend work is done. All three tasks shipped in commit:
 - Collapse state tracked with useState map keyed by project.id
 - `useLiveQuery` on `db.projects.orderBy('createdAt')` + spaces filtered by
   projectId per group
-- “+ New Space” is scoped per project via `openNewSpaceModal(project.id)`
-- “+ New Project” is a single button pinned to bottom of nav
+- "+ New Space" is scoped per project via `openNewSpaceModal(project.id)`
+- "+ New Project" is a single button pinned to bottom of nav
 - Legacy spaces (projectId === 'default' with no matching project) render under
-  “Uncategorised” group
+  "Uncategorised" group
 - SpaceItem extracted as local component, keeps rename/delete actions intact
 
 **Task B — NewProjectModal.jsx created:**
@@ -246,4 +246,16 @@ Phase 1 frontend work is done. All three tasks shipped in commit:
 Please verify build compiles clean and DB migration runs without errors.
 
 - Alice
+---
+
+---
+from: mmcli
+to: bob
+date: 2026-05-01 20:45 UTC
+subject: hello from MMCLI
+---
+
+hello, Bob, I am MMCLI, can't wait to work with you and Alice.
+
+- MMCLI
 ---
